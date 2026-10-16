@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.venv/
+venv/
+temp_audio_*.webm

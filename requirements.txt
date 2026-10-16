@@ -1,0 +1,9 @@
+Flask
+openai
+python-dotenv
+SpeechRecognition
+openai-whisper
+imageio-ffmpeg
+PyAutoGUI
+PyGetWindow
+requests
