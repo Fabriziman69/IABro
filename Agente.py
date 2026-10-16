@@ -10,7 +10,7 @@ import pygetwindow as gw
 import base64
 from io import BytesIO
 
-# Inyectar ffmpeg dinámicamente para que Whisper funcione sin instalaciones manuales
+# Whisper necesita un ejecutable llamado ffmpeg.exe en PATH.
 ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
 ffmpeg_dir = os.path.dirname(ffmpeg_path)
 ffmpeg_alias = os.path.join(ffmpeg_dir, "ffmpeg.exe")
@@ -24,7 +24,6 @@ os.environ["PATH"] += os.pathsep + ffmpeg_dir
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Cargar variables de entorno desde el archivo .env
 load_dotenv()
 
 client = OpenAI(
@@ -32,7 +31,7 @@ client = OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
-# 1. Definición de funciones
+# Acciones del sistema
 def ejecutar_comando_terminal(comando: str) -> str:
     try:
         resultado = subprocess.run(comando, shell=True, capture_output=True, text=True, timeout=15, check=False)
@@ -53,11 +52,10 @@ def abrir_aplicacion(nombre_o_ruta: str) -> str:
 
 def enviar_mensaje_whatsapp(destinatario: str, mensaje: str) -> str:
     try:
-        # Abrir whatsapp (solo funciona en Windows si la app de la tienda está instalada)
+        # Requiere la aplicación de WhatsApp instalada en Windows.
         subprocess.run("start whatsapp:", shell=True, check=False)
-        time.sleep(3) # Esperar a que cargue
+        time.sleep(3)
         
-        # Buscar el contacto/grupo
         pyautogui.hotkey('ctrl', 'f')
         time.sleep(1)
         pyautogui.write(destinatario, interval=0.05)
@@ -65,7 +63,6 @@ def enviar_mensaje_whatsapp(destinatario: str, mensaje: str) -> str:
         pyautogui.press('enter')
         time.sleep(1)
         
-        # Escribir y enviar mensaje
         pyautogui.write(mensaje, interval=0.05)
         time.sleep(0.5)
         pyautogui.press('enter')
@@ -165,7 +162,7 @@ HERRAMIENTAS_MAP = {
     "controlar_raton": controlar_raton
 }
 
-# 2. Esquema de herramientas
+# Herramientas disponibles para el modelo
 tools = [
     {
         "type": "function",
@@ -272,7 +269,7 @@ tools = [
         }
     }
 ]
-# Inicializamos un historial por defecto que Flask pueda importar
+# Estado de la sesión
 historial_global = [
     {"role": "system", "content": (
         "Eres Jarvis, un asistente de IA en la PC del usuario. Sigue ESTRICTAMENTE estas reglas:\n"
@@ -283,13 +280,12 @@ historial_global = [
     )}
 ]
 
-# Estadísticas de la sesión
 stats = {
     "api_calls": 0,
     "total_tokens": 0
 }
 
-# 3. Orquestador del Agente
+# Procesamiento de mensajes
 def procesar_mensaje(historial_mensajes):
     global stats
     
@@ -315,31 +311,25 @@ def procesar_mensaje(historial_mensajes):
         mensaje_asistente = respuesta.choices[0].message
         historial_mensajes.append(mensaje_asistente)
 
-        # Si el modelo NO generó llamadas a herramientas, es el mensaje final
         if not mensaje_asistente.tool_calls:
             return mensaje_asistente.content
 
-        # Si generó llamadas a herramientas, las procesamos y continuamos el bucle
         for tool_call in mensaje_asistente.tool_calls:
             nombre_funcion = tool_call.function.name
             argumentos = json.loads(tool_call.function.arguments)
 
             print(f"\n[Tool Invocada] -> {nombre_funcion}({argumentos})")
 
-            # Ejecutar la función en la máquina
             funcion_local = HERRAMIENTAS_MAP.get(nombre_funcion)
             resultado_ejecucion = funcion_local(**argumentos) if funcion_local else "Función no encontrada."
 
-            # Registrar el resultado de la herramienta en el historial
             if isinstance(resultado_ejecucion, dict) and "image_url" in resultado_ejecucion:
-                # El rol 'tool' DEBE ser un string
                 historial_mensajes.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": nombre_funcion,
                     "content": resultado_ejecucion.get("text", "Captura de pantalla lista.")
                 })
-                # Inyectamos la imagen como si el usuario se la acabara de enviar
                 historial_mensajes.append({
                     "role": "user",
                     "content": [
@@ -354,5 +344,3 @@ def procesar_mensaje(historial_mensajes):
                     "name": nombre_funcion,
                     "content": str(resultado_ejecucion)
                 })
-
-# 4. Bucle interactivo en consola

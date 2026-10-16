@@ -11,15 +11,14 @@ let isRecording = false;
 let mediaRecorder;
 let audioChunks = [];
 
-// Variables para detección de silencio
 let audioContext;
 let analyser;
 let microphone;
 let silenceTimer = null;
-const SILENCE_THRESHOLD = 15; // Sensibilidad al silencio
-const SILENCE_DURATION = 1500; // Milisegundos de silencio para cortar
+const SILENCE_THRESHOLD = 15;
+const SILENCE_DURATION = 1500;
 
-// Enviar texto manualmente
+// Chat de texto
 sendBtn.addEventListener('click', () => {
     const text = textInput.value.trim();
     if (text) {
@@ -33,7 +32,6 @@ textInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendBtn.click();
 });
 
-// Función para agregar mensajes al chat
 function addMessage(text, sender) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${sender}`;
@@ -42,7 +40,7 @@ function addMessage(text, sender) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Lógica de grabación de micrófono
+// Grabación y detección de silencio
 micBtn.addEventListener('click', async () => {
     if (!isRecording) {
         startRecording();
@@ -57,7 +55,6 @@ async function startRecording() {
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
 
-        // Configurar detección de silencio
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         microphone = audioContext.createMediaStreamSource(stream);
@@ -76,7 +73,6 @@ async function startRecording() {
         mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             await sendAudioToServer(audioBlob);
-            // Apagar micrófono y analizador
             stream.getTracks().forEach(track => track.stop());
             if (audioContext.state !== 'closed') {
                 audioContext.close();
@@ -86,14 +82,12 @@ async function startRecording() {
         mediaRecorder.start();
         isRecording = true;
         
-        // Efectos visuales
         micBtn.classList.add('recording');
         pulseRing.classList.remove('hidden');
         pulseRing.classList.add('recording');
         statusText.textContent = 'Habla... (Se enviará automáticamente)';
         statusText.style.color = '#ef4444';
         
-        // Bucle de detección de silencio
         function detectSilence() {
             if (!isRecording) return;
             
@@ -131,7 +125,6 @@ function stopRecording() {
         mediaRecorder.stop();
         isRecording = false;
         
-        // Efectos visuales
         micBtn.classList.remove('recording');
         pulseRing.classList.remove('recording');
         statusText.textContent = 'Procesando voz...';
@@ -139,7 +132,7 @@ function stopRecording() {
     }
 }
 
-// Comunicacion con Flask
+// API de Flask
 async function sendTextToServer(text) {
     try {
         const response = await fetch('/chat', {
@@ -176,7 +169,6 @@ async function sendAudioToServer(blob) {
         
         updateStats(data.stats);
 
-        // Restaurar estado
         pulseRing.classList.add('hidden');
         statusText.textContent = 'Presiona para hablar';
         statusText.style.color = 'var(--text-muted)';

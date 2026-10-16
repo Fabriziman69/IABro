@@ -21,7 +21,7 @@ def chat():
         respuesta = procesar_mensaje(historial_global)
         return jsonify({"response": respuesta, "stats": stats})
     except Exception as e:
-        historial_global.pop() # Revertir si hay error
+        historial_global.pop()
         if "429" in str(e) or "RateLimitError" in str(e):
             return jsonify({"response": "[!] Límite de la API alcanzado. Espera 30 segundos.", "stats": stats})
         return jsonify({"response": f"[!] Error: {str(e)}", "stats": stats})
@@ -32,13 +32,11 @@ def audio():
         return jsonify({"error": "No audio file provided"}), 400
     
     archivo_audio = request.files["audio"]
-    # Generar un nombre único para evitar colisiones si el usuario presiona el botón varias veces
     nombre_unico = f"temp_audio_{uuid.uuid4().hex}.webm"
     ruta_temp = os.path.join(os.getcwd(), nombre_unico)
     
     archivo_audio.save(ruta_temp)
     
-    # Transcribir usando el modelo local
     texto_transcrito = transcribir_audio_archivo(ruta_temp)
     
     if os.path.exists(ruta_temp):
@@ -50,7 +48,6 @@ def audio():
     if not texto_transcrito:
         return jsonify({"response": "[!] No pude entender el audio.", "stats": stats})
 
-    # Procesar como mensaje normal
     historial_global.append({"role": "user", "content": texto_transcrito})
     try:
         respuesta = procesar_mensaje(historial_global)
